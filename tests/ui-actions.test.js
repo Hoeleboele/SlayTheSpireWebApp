@@ -32,6 +32,32 @@ function buttonMarkup(controller, action) {
   return markup[0];
 }
 
+test("backdrop clicks close enemy controls but clicks inside the dialog do not", () => {
+  const controller = createController(1);
+  click(controller, "get-enemies");
+  const enemy = controller.gameState.rows[0].enemies[0];
+  const dialog = {
+    closest: () => null,
+    getBoundingClientRect: () => ({ left: 100, right: 400, top: 100, bottom: 500 }),
+    showModal() {},
+  };
+  controller.root.querySelector = () => dialog;
+  for (const [clientX, clientY] of [[99, 200], [400, 200], [200, 99], [200, 500]]) {
+    click(controller, "select-enemy", { enemyId: enemy.id });
+    controller.handleClick({ target: dialog, clientX: 200, clientY: 200 });
+    assert.equal(controller.gameState.selectedEnemyId, enemy.id);
+    controller.handleClick({ target: { closest: () => null }, clientX, clientY });
+    assert.equal(controller.gameState.selectedEnemyId, enemy.id);
+    controller.handleClick({ target: dialog, clientX, clientY });
+    assert.equal(controller.gameState.selectedEnemyId, null);
+    assert.doesNotMatch(controller.root.innerHTML, /control-dialog/);
+    assert.equal(enemy.health, enemy.maxHealth);
+  }
+  click(controller, "select-enemy", { enemyId: enemy.id });
+  click(controller, "close-panel");
+  assert.equal(controller.gameState.selectedEnemyId, null);
+});
+
 test("populated rows render fixed, loop and dice attacks in both views", () => {
   const state = new GameState(1);
   state.rows[0].enemies = ENEMY_POOL.map((definition) => new Enemy(definition));

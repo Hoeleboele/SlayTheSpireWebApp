@@ -40,7 +40,16 @@ export class AppController {
   }
 
   handleClick(event) {
-    const button = event.target.closest("[data-action]");
+    let button = event.target.closest("[data-action]");
+    if (this.gameState?.selectedEnemyId) {
+      const dialog = this.root.querySelector(".control-dialog");
+      if (dialog && event.target === dialog) {
+        const bounds = dialog.getBoundingClientRect();
+        const outside = event.clientX < bounds.left || event.clientX >= bounds.right
+          || event.clientY < bounds.top || event.clientY >= bounds.bottom;
+        if (outside) button = { dataset: { action: "close-panel" } };
+      }
+    }
     if (!button) return;
     const { action } = button.dataset;
     if (!this.gameState) {
