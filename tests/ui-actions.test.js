@@ -109,6 +109,23 @@ test("populated rows render fixed, loop and dice attacks in both views", () => {
   }
 });
 
+test("optional passive effect renders at the bottom of its enemy card", () => {
+  const definition = {
+    ...ENEMY_POOL[0],
+    passiveEffect: "Stone Skin: Gain 2 block & resist",
+  };
+  const state = new GameState(1);
+  state.rows[0].enemies = [new Enemy(definition)];
+  const root = { innerHTML: "" };
+  new GameView().render(root, state);
+  assert.match(root.innerHTML, /<div class="passive-effect">Stone Skin: Gain 2 block &amp; resist<\/div>\s*<\/article>/);
+  assert.equal(state.rows[0].enemies[0].passiveEffect, definition.passiveEffect);
+
+  state.rows[0].enemies = [new Enemy(ENEMY_POOL[0])];
+  new GameView().render(root, state);
+  assert.doesNotMatch(root.innerHTML, /class="passive-effect"/);
+});
+
 test("loading controls populate once and only configured cards unlock spawning", () => {
   for (const rowCount of [1, 4]) {
     const controller = createController(rowCount);
@@ -351,6 +368,24 @@ test("clicking the vulnerable tag removes one stack only on its enemy in either 
     click(controller, "reduce-vulnerable", { enemyId: "missing" });
     assert.equal(neighbour.statuses.vulnerable, 2);
   }
+});
+
+test("strength can be added to eight but exposes no reduction control", () => {
+  const controller = createController(1);
+  click(controller, "get-enemies");
+  controller.root.querySelector = () => ({ showModal() {} });
+  const enemy = controller.gameState.rows[0].enemies[0];
+  enemy.addStatus("strength", 7);
+  click(controller, "select-enemy", { enemyId: enemy.id });
+  assert.match(controller.root.innerHTML, /<span class="status-pill status-strength"><i><\/i>strength <b>7<\/b><\/span>/);
+  assert.match(controller.root.innerHTML, /data-action="status-add" data-amount="strength"/);
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="status-remove" data-amount="strength"/);
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="reduce-strength"/);
+  click(controller, "status-add", { enemyId: enemy.id, amount: "strength" });
+  click(controller, "status-add", { enemyId: enemy.id, amount: "strength" });
+  assert.equal(enemy.statuses.strength, 8);
+  click(controller, "status-remove", { enemyId: enemy.id, amount: "strength" });
+  assert.equal(enemy.statuses.strength, 8);
 });
 
 test("card damage controls target their enemy without selecting it in either view", () => {

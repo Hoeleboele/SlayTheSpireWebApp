@@ -36,6 +36,18 @@ test("poison bypasses block and status stacks obey their caps", () => {
   assert.equal(enemy.block, 10);
 });
 
+test("strength stacks to eight and cannot be reduced", () => {
+  const enemy = new Enemy(definition, "enemy-1");
+  assert.equal(enemy.addStatus("strength", 6), 6);
+  assert.equal(enemy.addStatus("strength", 6), 2);
+  assert.equal(enemy.statuses.strength, 8);
+  assert.equal(enemy.removeStatus("strength"), 0);
+  assert.equal(enemy.removeStatus("strength", 8), 0);
+  assert.equal(enemy.statuses.strength, 8);
+  enemy.resurrect();
+  assert.equal(enemy.statuses.strength, 0);
+});
+
 test("poison budget is shared across rows", () => {
   const game = new GameState(2);
   const first = new Enemy(definition, "first");

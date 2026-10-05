@@ -44,6 +44,7 @@ function enemyCard(enemy, rowIndex, state) {
       <span>Damage</span>
       ${[1, 5].map((amount) => `<button class="card-damage-button" type="button" data-action="damage" data-amount="${amount}" data-enemy-id="${escapeHtml(enemy.id)}" title="Deal ${amount} damage to ${escapeHtml(enemy.name)}" aria-label="Deal ${amount} damage to ${escapeHtml(enemy.name)}" ${enemy.isAlive ? "" : "disabled"}>-${amount}</button>`).join("")}
     </div>
+    ${enemy.passiveEffect ? `<div class="passive-effect">${escapeHtml(enemy.passiveEffect)}</div>` : ""}
     </article>`;
 }
 
@@ -71,7 +72,7 @@ function controlPanel(state) {
       ${enemy.isAlive ? `
         <section class="control-section"><div class="section-title"><h3>Health</h3><span>${enemy.health} / ${enemy.maxHealth}</span></div><div class="control-grid">${control("−1 damage", "damage", 1)}${control("−5 damage", "damage", 5)}${control("+1 heal", "heal", 1)}${control("+5 heal", "heal", 5)}</div><p class="control-hint">Damage removes block first. Healing stops at max health.</p></section>
         <section class="control-section"><div class="section-title"><h3>Block</h3><span>${enemy.block}</span></div><div class="control-grid">${control("−1", "block", -1)}${control("−5", "block", -5)}${control("+1", "block", 1)}${control("+5", "block", 5)}</div></section>
-        <section class="control-section"><div class="section-title"><h3>Status effects</h3><span class="poison-budget">${state.poisonTotal} / 30 poison</span></div>${["vulnerable", "weak", "poison"].map((status) => `<div class="status-control"><span class="status-name status-${status}"><i></i>${status}<b>${enemy.statuses[status]}</b></span><span class="status-buttons">${control("−", "status-remove", status, "small-control")}${control("+", "status-add", status, "small-control")}</span></div>`).join("")}</section>
+        <section class="control-section"><div class="section-title"><h3>Status effects</h3><span class="poison-budget">${state.poisonTotal} / 30 poison</span></div>${["vulnerable", "weak", "strength", "poison"].map((status) => `<div class="status-control"><span class="status-name status-${status}"><i></i>${status}<b>${enemy.statuses[status]}</b></span><span class="status-buttons">${status === "strength" ? "" : control("−", "status-remove", status, "small-control")}${control("+", "status-add", status, "small-control")}</span></div>`).join("")}</section>
         <button class="danger-button" type="button" data-action="kill" data-enemy-id="${escapeHtml(enemy.id)}">Mark defeated</button>` : `
         <div class="resurrection-note"><span>✦</span><p>This enemy is defeated.<br>Resurrection restores full health in this lane.</p></div>
         <button class="primary-button resurrect-button" type="button" data-action="resurrect" data-enemy-id="${escapeHtml(enemy.id)}">Resurrect at full health</button>`}

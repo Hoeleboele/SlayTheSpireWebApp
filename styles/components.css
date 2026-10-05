@@ -41,6 +41,7 @@ button.status-pill { background: transparent; cursor: pointer; }
 button.status-pill:hover { border-color: currentColor; }
 button.status-pill:focus-visible { outline: 2px solid var(--acid); outline-offset: 2px; }
 .card-damage-controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; padding: 7px 10px; border-top: 1px solid var(--line); background: #18211c; }
+.passive-effect { grid-column: 1 / -1; padding: 8px 10px; border-top: 1px solid var(--line); color: var(--acid); font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
 .card-damage-controls .spawn-button { flex: 0 0 auto; }
 .spawn-button:focus-visible { outline: 2px solid var(--acid); outline-offset: 2px; }
 .card-damage-controls > span { margin-right: auto; color: var(--muted); font-size: 9px; }

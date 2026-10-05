@@ -1,4 +1,4 @@
-import { MAX_STATUS_STACKS, STATUS_TYPES } from "../config/gameConfig.js";
+import { MAX_STATUS_STACKS, MAX_STRENGTH_STACKS, STATUS_TYPES } from "../config/gameConfig.js";
 
 export class Enemy {
   constructor(definition, id = crypto.randomUUID()) {
@@ -12,11 +12,13 @@ export class Enemy {
     this.statuses = {
       [STATUS_TYPES.VULNERABLE]: 0,
       [STATUS_TYPES.WEAK]: 0,
+      [STATUS_TYPES.STRENGTH]: 0,
       [STATUS_TYPES.POISON]: 0,
     };
     this.attackBehaviour = structuredClone(definition.attackBehaviour);
     this.attackIndex = 0;
     this.image = definition.image;
+    this.passiveEffect = definition.passiveEffect ?? "";
     this.spawnPool = [...(definition.spawnPool ?? [])];
   }
 
@@ -57,14 +59,15 @@ export class Enemy {
 
   addStatus(type, amount = 1) {
     if (!Object.hasOwn(this.statuses, type) || !this.isAlive) return 0;
-    const cap = type === STATUS_TYPES.POISON ? Number.POSITIVE_INFINITY : MAX_STATUS_STACKS;
+    const cap = type === STATUS_TYPES.POISON ? Number.POSITIVE_INFINITY
+      : type === STATUS_TYPES.STRENGTH ? MAX_STRENGTH_STACKS : MAX_STATUS_STACKS;
     const before = this.statuses[type];
     this.statuses[type] = Math.min(cap, before + Math.max(0, Math.floor(amount)));
     return this.statuses[type] - before;
   }
 
   removeStatus(type, amount = 1) {
-    if (!Object.hasOwn(this.statuses, type)) return 0;
+    if (!Object.hasOwn(this.statuses, type) || type === STATUS_TYPES.STRENGTH) return 0;
     const before = this.statuses[type];
     this.statuses[type] = Math.max(0, before - Math.max(0, Math.floor(amount)));
     return before - this.statuses[type];
@@ -76,6 +79,7 @@ export class Enemy {
     this.statuses = {
       [STATUS_TYPES.VULNERABLE]: 0,
       [STATUS_TYPES.WEAK]: 0,
+      [STATUS_TYPES.STRENGTH]: 0,
       [STATUS_TYPES.POISON]: 0,
     };
   }
