@@ -22,7 +22,7 @@ function attackMarkup(enemy) {
     <p><b>${escapeHtml(face.range)}</b><span>${escapeHtml(face.text)}</span></p>`).join("")}</div>`;
 }
 
-function enemyCard(enemy, rowIndex) {
+function enemyCard(enemy, rowIndex, state) {
   const image = enemy.isAlive ? enemy.image : "assets/images/fallen.svg";
   const behaviour = enemy.attackBehaviour;
   return `
@@ -40,6 +40,7 @@ function enemyCard(enemy, rowIndex) {
     </button>
     <div class="status-list">${statusPills(enemy)}</div>
     <div class="card-damage-controls" role="group" aria-label="Damage ${escapeHtml(enemy.name)}">
+      ${state.enemiesLoaded && !state.zoomedOut && enemy.isAlive && enemy.spawnPool.length ? `<button class="spawn-button" type="button" data-action="spawn" data-enemy-id="${escapeHtml(enemy.id)}" title="Spawn an enemy from ${escapeHtml(enemy.name)}" aria-label="Spawn an enemy from ${escapeHtml(enemy.name)}"><span aria-hidden="true">+</span> Spawn</button>` : ""}
       <span>Damage</span>
       ${[1, 5].map((amount) => `<button class="card-damage-button" type="button" data-action="damage" data-amount="${amount}" data-enemy-id="${escapeHtml(enemy.id)}" title="Deal ${amount} damage to ${escapeHtml(enemy.name)}" aria-label="Deal ${amount} damage to ${escapeHtml(enemy.name)}" ${enemy.isAlive ? "" : "disabled"}>-${amount}</button>`).join("")}
     </div>
@@ -47,16 +48,15 @@ function enemyCard(enemy, rowIndex) {
 }
 
 function rowMarkup(row, index, state) {
-  const active = !state.zoomedOut;
   return `
     <section class="battle-row ${state.zoomedOut ? "overview-row" : "focused-row"}" data-row-index="${index}">
       <header class="row-heading">
         <button class="row-title ${state.zoomedOut ? "row-select" : ""}" type="button" ${state.zoomedOut ? `data-action="select-row" data-row="${index}"` : "disabled"}>
           <span class="row-number">${String(index + 1).padStart(2, "0")}</span><span><small>ENCOUNTER LANE</small><strong>Row ${index + 1}</strong></span>${state.zoomedOut ? '<span class="row-open">OPEN ↗</span>' : ""}
         </button>
-        ${active ? `<button class="spawn-button" type="button" data-action="spawn" data-row="${index}" ${state.enemiesLoaded ? "" : "disabled"}><span aria-hidden="true">＋</span> Spawn enemy</button>` : `<span class="enemy-count">${row.enemies.length} ${row.enemies.length === 1 ? "ENEMY" : "ENEMIES"}</span>`}
+        <span class="enemy-count">${row.enemies.length} ${row.enemies.length === 1 ? "ENEMY" : "ENEMIES"}</span>
       </header>
-      ${row.enemies.length ? `<div class="enemy-grid" tabindex="0" role="region" aria-label="Row ${index + 1} enemies">${row.enemies.map((enemy) => enemyCard(enemy, index)).join("")}</div>` : '<div class="empty-row"><span>—</span><p>Lane is clear. Get enemies to begin.</p></div>'}
+      ${row.enemies.length ? `<div class="enemy-grid" tabindex="0" role="region" aria-label="Row ${index + 1} enemies">${row.enemies.map((enemy) => enemyCard(enemy, index, state)).join("")}</div>` : '<div class="empty-row"><span>—</span><p>Lane is clear. Get enemies to begin.</p></div>'}
     </section>`;
 }
 

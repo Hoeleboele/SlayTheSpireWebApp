@@ -40,7 +40,9 @@
 button.status-pill { background: transparent; cursor: pointer; }
 button.status-pill:hover { border-color: currentColor; }
 button.status-pill:focus-visible { outline: 2px solid var(--acid); outline-offset: 2px; }
-.card-damage-controls { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 7px 10px; border-top: 1px solid var(--line); background: #18211c; }
+.card-damage-controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; padding: 7px 10px; border-top: 1px solid var(--line); background: #18211c; }
+.card-damage-controls .spawn-button { flex: 0 0 auto; }
+.spawn-button:focus-visible { outline: 2px solid var(--acid); outline-offset: 2px; }
 .card-damage-controls > span { margin-right: auto; color: var(--muted); font-size: 9px; }
 .card-damage-button { flex: 0 0 44px; width: 44px; height: 36px; padding: 0; border: 1px solid #7d493b; border-radius: 3px; background: #34251f; color: #ffad93; cursor: pointer; font: 600 12px "DM Mono", monospace; }
 .card-damage-button:hover:not(:disabled) { border-color: var(--ember); background: #4a2e24; }

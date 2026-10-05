@@ -17,6 +17,7 @@ export class Enemy {
     this.attackBehaviour = structuredClone(definition.attackBehaviour);
     this.attackIndex = 0;
     this.image = definition.image;
+    this.spawnPool = [...(definition.spawnPool ?? [])];
   }
 
   get isAlive() {

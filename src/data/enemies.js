@@ -1,4 +1,4 @@
-export const ENEMY_POOL = Object.freeze([
+export const AVAILABLE_ENEMIES = Object.freeze([
   {
     id: "ashbound",
     name: "Ashbound Initiate",
@@ -35,6 +35,7 @@ export const ENEMY_POOL = Object.freeze([
   },
   {
     id: "ironhowl",
+    spawnPool: Object.freeze(["ironhowl"]),
     name: "Ironhowl Brute",
     kind: "Armored raider",
     maxHealth: 58,
@@ -43,11 +44,11 @@ export const ENEMY_POOL = Object.freeze([
   },
 ]);
 
-export const ENCOUNTER_PRESETS = Object.freeze([
-  { id: "ashbound-pair", enemyIds: ["ashbound", "ashbound"] },
-  { id: "glass-warden", enemyIds: ["glasswarden"] },
-  { id: "mireling-trio", enemyIds: ["mireling", "mireling", "mireling"] },
-  { id: "ironhowl", enemyIds: ["ironhowl"] },
-  { id: "ashbound-mireling", enemyIds: ["ashbound", "mireling"] },
-  { id: "warden-ashbound", enemyIds: ["glasswarden", "ashbound"] },
-].map((preset) => Object.freeze({ ...preset, enemyIds: Object.freeze(preset.enemyIds) })));
+const definitions = new Map(AVAILABLE_ENEMIES.map((enemy) => [enemy.id, enemy]));
+
+export const ENEMY_POOL = Object.freeze([
+  { ...definitions.get("ashbound") },
+  { ...definitions.get("glasswarden"), companions: Object.freeze(["glasswarden"]) },
+  { ...definitions.get("mireling"), companions: Object.freeze(["mireling", "mireling"]) },
+  { ...definitions.get("ironhowl") },
+]);

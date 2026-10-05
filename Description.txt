@@ -25,8 +25,11 @@ health should go down by 1 or 5.
 enemies can heal health by 1 or 5 but not above max health.
 enemies should be changed to a death image when their health reaches 0.
 enemies should be able to be resurected.
-There should be an option on the main game screen to spawn an new enemy from a set list for that row.
+Only living enemies with a configured spawnPool should have a spawn button on their card in the focused-row view.
+One spawnPool entry spawns that enemy; multiple entries randomly select one enemy from that specific pool.
+Only Ironhowl Brute currently has a spawnPool, containing Ironhowl Brute.
 spawning should happen in a row and always in front of the current already available enemies.
+Spawning adds exactly one enemy to the source enemy's row and can be repeated without a limit.
 resurecting should always happen to full health.
 resurecting should always be in the same spot as they where before dieing.
 The main game screen should also have the option to end a turn.
@@ -41,7 +44,15 @@ Enemies can have 3 diffent attack behaviour types.
 3. enemy has attack types based on dice faces. the faces and types should be shown on the enemy.
 
 Initial encounter loading:
-Get enemies fills each row once per game with a randomly chosen preset, without reusing a preset in another row.
-Presets are: two Ashbound Initiates; one Glass Warden; three Mireling Swarms; one Ironhowl Brute; Ashbound Initiate then Mireling Swarm; Glass Warden then Ashbound Initiate.
-Get enemies is disabled after loading. Spawn enemy is disabled until loading completes.
-Leaving and starting a new game resets these controls.
+AVAILABLE_ENEMIES is the reusable catalog of all enemy definitions, including enemies used only as companions or spawn targets.
+ENEMY_POOL separately lists selectable starting groups using definitions from that catalog. Adding an enemy to AVAILABLE_ENEMIES alone does not make it a starting group.
+Each starting group can list initial companions by catalog enemy ID. The starting group is the primary enemy followed by those companions.
+Groups are: one Ashbound Initiate; two Glass Wardens; three Mireling Swarms; one Ironhowl Brute.
+Companions and manually spawned enemies do not recursively add their own companions.
+Get enemies fills each row once per load with a randomly chosen group, without reusing a group in another row.
+Unseen groups are used before restarting the pool. Clearing defeated rows preserves this history and enables another load.
+Get enemies is disabled after loading. No spawn buttons appear before loading or in the overview.
+An optional companions array defines the initial group; an optional spawnPool array defines manual spawn targets. Missing or empty arrays mean no companions or no spawning, respectively.
+Both companions and spawnPool resolve IDs against AVAILABLE_ENEMIES, not the starting groups in ENEMY_POOL.
+Keep spawnPool on a catalog definition when every instance of that enemy should spawn; a starting group can override it for its primary enemy.
+Leaving and starting a new game resets loading controls and group history.

@@ -76,7 +76,7 @@ export class AppController {
       case "navigate": state.activeRow = Math.max(0, Math.min(state.rows.length - 1, state.activeRow + Number(button.dataset.direction))); break;
       case "spawn":
         if (!state.enemiesLoaded) return;
-        this.enemyPool.spawnAtFront(state, Number(button.dataset.row));
+        this.enemyPool.spawnAtFront(state, button.dataset.enemyId);
         break;
       case "select-enemy": state.selectedEnemyId = button.dataset.enemyId; break;
       case "close-panel": state.selectedEnemyId = null; break;

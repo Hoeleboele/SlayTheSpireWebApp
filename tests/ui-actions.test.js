@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ENEMY_POOL, ENCOUNTER_PRESETS } from "../src/data/enemies.js";
+import { ENEMY_POOL } from "../src/data/enemies.js";
+
+const groups = ENEMY_POOL.map((enemy) => [enemy.id, ...(enemy.companions ?? [])]);
 import { Enemy } from "../src/models/Enemy.js";
 import { GameState } from "../src/models/GameState.js";
 import { GameView } from "../src/views/GameView.js";
@@ -107,19 +109,19 @@ test("populated rows render fixed, loop and dice attacks in both views", () => {
   }
 });
 
-test("loading controls populate once and unlock front-of-row spawning", () => {
+test("loading controls populate once and only configured cards unlock spawning", () => {
   for (const rowCount of [1, 4]) {
     const controller = createController(rowCount);
     const state = controller.gameState;
     assert.doesNotMatch(buttonMarkup(controller, "get-enemies"), /disabled/);
-    assert.match(buttonMarkup(controller, "spawn"), /disabled/);
+    assert.doesNotMatch(controller.root.innerHTML, /data-action="spawn"/);
     click(controller, "spawn", { row: "0" });
     assert.equal(state.rows[0].enemies.length, 0);
     click(controller, "get-enemies");
     assert.ok(state.rows.every((row) => row.enemies.length > 0));
     assert.match(controller.root.innerHTML, /enemy-card/);
     assert.match(buttonMarkup(controller, "get-enemies"), /disabled/);
-    assert.doesNotMatch(buttonMarkup(controller, "spawn"), /disabled/);
+    assert.doesNotMatch(controller.root.innerHTML, /data-action="spawn"/);
     const original = state.rows[0].enemies[0];
     original.takeDamage(5);
     original.addStatus("weak");
@@ -127,9 +129,20 @@ test("loading controls populate once and unlock front-of-row spawning", () => {
     assert.equal(state.rows[0].enemies[0], original);
     assert.equal(original.health, original.maxHealth - 5);
     assert.equal(original.statuses.weak, 1);
-    click(controller, "spawn", { row: "0" });
-    assert.notEqual(state.rows[0].enemies[0], original);
-    assert.equal(state.rows[0].enemies[1], original);
+    click(controller, "spawn", { enemyId: original.id, row: "0" });
+    assert.equal(state.rows[0].enemies[0], original);
+    if (rowCount === 4) {
+      click(controller, "select-row", { row: "3" });
+      const source = state.rows[3].enemies[0];
+      const button = buttonMarkup(controller, "spawn");
+      assert.ok(button.includes(`data-enemy-id="${source.id}"`));
+      assert.doesNotMatch(button, /data-row=|disabled/);
+      click(controller, "spawn", { enemyId: source.id, row: "0" });
+      assert.equal(state.rows[3].enemies[0].definitionId, "ironhowl");
+      assert.equal(state.rows[3].enemies[1], source);
+      assert.equal(state.rows[0].enemies[0], original);
+      assert.equal(state.selectedEnemyId, null);
+    }
     click(controller, "end-turn");
     assert.equal(state.turn, 2);
     assert.equal(original.statuses.weak, 1);
@@ -137,7 +150,7 @@ test("loading controls populate once and unlock front-of-row spawning", () => {
 });
 
 test("Clear rows appears only after all enemies are defeated, including spawned enemies", () => {
-  const controller = createController(2);
+  const controller = createController(4);
   const state = controller.gameState;
   assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
   click(controller, "clear-rows");
@@ -146,32 +159,40 @@ test("Clear rows appears only after all enemies are defeated, including spawned 
   const originalRows = state.rows.map((row) => row.enemies);
   click(controller, "clear-rows");
   state.rows.forEach((row, index) => assert.equal(row.enemies, originalRows[index]));
-  for (const enemy of state.rows[0].enemies) click(controller, "kill", { enemyId: enemy.id });
-  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
-  const last = state.rows[1].enemies[0];
-  click(controller, "kill", { enemyId: last.id });
-  assert.match(buttonMarkup(controller, "clear-rows"), /secondary-button/);
-  assert.match(controller.root.innerHTML, /data-action="get-enemies"[^>]*>Get enemies<\/button>\s*<button[^>]*data-action="clear-rows"[^>]*>Clear rows<\/button>/);
-  click(controller, "resurrect", { enemyId: last.id });
-  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
-  click(controller, "kill", { enemyId: last.id });
+  const source = state.rows[3].enemies[0];
   const history = [...state.encounterHistory];
-  click(controller, "spawn", { row: "0" });
+  click(controller, "spawn", { enemyId: source.id });
+  const spawned = state.rows[3].enemies[0];
   assert.deepEqual([...state.encounterHistory], history);
+  for (const enemies of originalRows) {
+    for (const enemy of [...enemies]) {
+      if (enemy !== spawned) click(controller, "kill", { enemyId: enemy.id });
+    }
+  }
   assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
   click(controller, "clear-rows");
   assert.equal(state.enemiesLoaded, true);
-  click(controller, "kill", { enemyId: state.rows[0].enemies[0].id });
+  click(controller, "kill", { enemyId: spawned.id });
+  assert.match(buttonMarkup(controller, "clear-rows"), /secondary-button/);
+  assert.match(controller.root.innerHTML, /data-action="get-enemies"[^>]*>Get enemies<\/button>\s*<button[^>]*data-action="clear-rows"[^>]*>Clear rows<\/button>/);
+  click(controller, "resurrect", { enemyId: source.id });
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
+  click(controller, "kill", { enemyId: source.id });
+  click(controller, "spawn", { enemyId: source.id });
+  assert.equal(state.rows[3].enemies.length, 2);
   assert.ok(buttonMarkup(controller, "clear-rows"));
+  click(controller, "clear-rows");
+  assert.equal(state.enemiesLoaded, false);
+  assert.ok(state.rows.every((row) => row.enemies.length === 0));
 });
 
 test("clearing resets turn and view and enables loading new groups across cycles", () => {
   const controller = createController(4);
   const state = controller.gameState;
-  for (const indexes of [[0, 1, 2, 3], [4, 5, 0, 1], [2, 3, 0, 1]]) {
+  for (const indexes of [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]) {
     click(controller, "get-enemies");
     assert.deepEqual(state.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
-      indexes.map((index) => ENCOUNTER_PRESETS[index].enemyIds));
+      indexes.map((index) => groups[index]));
     click(controller, "end-turn");
     click(controller, "select-row", { row: "3" });
     click(controller, "toggle-overview");
@@ -190,7 +211,7 @@ test("clearing resets turn and view and enables loading new groups across cycles
     assert.ok(state.rows.every((row) => row.enemies.length === 0));
     assert.doesNotMatch(controller.root.innerHTML, /enemy-card|control-dialog|data-action="clear-rows"/);
     assert.doesNotMatch(buttonMarkup(controller, "get-enemies"), /disabled/);
-    assert.match(buttonMarkup(controller, "spawn"), /disabled/);
+    assert.doesNotMatch(controller.root.innerHTML, /data-action="spawn"/);
     click(controller, "spawn", { row: "0" });
     assert.equal(state.rows[0].enemies.length, 0);
   }
@@ -198,7 +219,7 @@ test("clearing resets turn and view and enables loading new groups across cycles
 
 test("poison defeating the last enemy makes Clear rows available", () => {
   const controller = createController(1);
-  controller.enemyPool = new EnemyPoolService(ENEMY_POOL, () => 0, [ENCOUNTER_PRESETS[1]]);
+  controller.enemyPool = new EnemyPoolService([ENEMY_POOL[0]], () => 0);
   click(controller, "get-enemies");
   const enemy = controller.gameState.rows[0].enemies[0];
   enemy.takeDamage(enemy.health - 1);
@@ -252,12 +273,12 @@ test("leaving and starting a new game restores initial loading controls", () => 
   assert.equal(controller.gameState.enemiesLoaded, false);
   assert.ok(controller.gameState.rows.every((row) => row.enemies.length === 0));
   assert.doesNotMatch(buttonMarkup(controller, "get-enemies"), /disabled/);
-  assert.match(buttonMarkup(controller, "spawn"), /disabled/);
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="spawn"/);
   assert.equal(controller.gameState.encounterHistory.size, 0);
   assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
   click(controller, "get-enemies");
   assert.deepEqual(controller.gameState.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
-    ENCOUNTER_PRESETS.slice(0, 4).map((preset) => preset.enemyIds));
+    groups);
 });
 
 test("clicking the weak tag removes one stack only on its enemy in either view", () => {
@@ -265,7 +286,9 @@ test("clicking the weak tag removes one stack only on its enemy in either view",
     const controller = createController(2);
     click(controller, "get-enemies");
     controller.gameState.zoomedOut = zoomedOut;
-    const [enemy, neighbour] = controller.gameState.rows[0].enemies;
+    click(controller, "select-row", { row: "1" });
+    controller.gameState.zoomedOut = zoomedOut;
+    const [enemy, neighbour] = controller.gameState.rows[1].enemies;
     enemy.addStatus("weak", 3);
     enemy.addStatus("vulnerable", 2);
     neighbour.addStatus("weak", 2);
@@ -301,7 +324,9 @@ test("clicking the vulnerable tag removes one stack only on its enemy in either 
     const controller = createController(2);
     click(controller, "get-enemies");
     controller.gameState.zoomedOut = zoomedOut;
-    const [enemy, neighbour] = controller.gameState.rows[0].enemies;
+    click(controller, "select-row", { row: "1" });
+    controller.gameState.zoomedOut = zoomedOut;
+    const [enemy, neighbour] = controller.gameState.rows[1].enemies;
     enemy.addStatus("vulnerable", 3);
     enemy.addStatus("weak", 2);
     neighbour.addStatus("vulnerable", 2);
@@ -334,7 +359,10 @@ test("card damage controls target their enemy without selecting it in either vie
     click(controller, "get-enemies");
     controller.gameState.zoomedOut = zoomedOut;
     controller.renderGame();
-    const [enemy, neighbour] = controller.gameState.rows[0].enemies;
+    click(controller, "select-row", { row: "1" });
+    controller.gameState.zoomedOut = zoomedOut;
+    controller.renderGame();
+    const [enemy, neighbour] = controller.gameState.rows[1].enemies;
     enemy.adjustBlock(3);
     const controls = controller.root.innerHTML.match(/<button class="card-damage-button"[^>]*>/g);
     assert.ok(controls.length >= 4);
@@ -367,4 +395,37 @@ test("card damage controls target their enemy without selecting it in either vie
       .filter((markup) => markup.includes(`data-enemy-id="${enemy.id}"`));
     assert.ok(restoredControls.every((markup) => !markup.includes("disabled")));
   }
+});
+
+test("spawn controls belong to living Ironhowl cards in focused view only", () => {
+  const controller = createController(4);
+  const state = controller.gameState;
+  click(controller, "get-enemies");
+  for (const row of [0, 1, 2]) {
+    click(controller, "select-row", { row: String(row) });
+    assert.doesNotMatch(controller.root.innerHTML, /data-action="spawn"/);
+  }
+  click(controller, "select-row", { row: "3" });
+  const source = state.rows[3].enemies[0];
+  assert.match(buttonMarkup(controller, "spawn"), /aria-label="Spawn an enemy from Ironhowl Brute"/);
+  assert.match(controller.root.innerHTML, /<div class="card-damage-controls"[^>]*>\s*<button class="spawn-button"/);
+  click(controller, "spawn", { enemyId: source.id });
+  const spawned = state.rows[3].enemies[0];
+  assert.equal((controller.root.innerHTML.match(/data-action="spawn"/g) ?? []).length, 2);
+  assert.equal(state.selectedEnemyId, null);
+  assert.equal(state.activeRow, 3);
+  assert.doesNotMatch(controller.root.innerHTML, /control-dialog/);
+  click(controller, "toggle-overview");
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="spawn"/);
+  click(controller, "toggle-overview");
+  click(controller, "kill", { enemyId: source.id });
+  assert.equal((controller.root.innerHTML.match(/data-action="spawn"/g) ?? []).length, 1);
+  assert.ok(buttonMarkup(controller, "spawn").includes(spawned.id));
+  click(controller, "spawn", { enemyId: source.id });
+  click(controller, "spawn", { enemyId: "missing" });
+  assert.equal(state.rows[3].enemies.length, 2);
+  click(controller, "resurrect", { enemyId: source.id });
+  assert.equal((controller.root.innerHTML.match(/data-action="spawn"/g) ?? []).length, 2);
+  click(controller, "spawn", { enemyId: source.id });
+  assert.equal(state.rows[3].enemies.length, 3);
 });
