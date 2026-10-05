@@ -4,7 +4,7 @@ function statusPills(enemy) {
   return Object.entries(enemy.statuses)
     .filter(([, count]) => count > 0)
     .map(([name, count]) => name === "weak"
-      ? `<button class="status-pill status-weak" type="button" data-action="clear-weak" data-enemy-id="${escapeHtml(enemy.id)}" title="Remove Weak" aria-label="Remove Weak from ${escapeHtml(enemy.name)}"><i></i>weak <b>${count}</b></button>`
+      ? `<button class="status-pill status-weak" type="button" data-action="reduce-weak" data-enemy-id="${escapeHtml(enemy.id)}" title="Remove one Weak stack" aria-label="Remove one Weak stack from ${escapeHtml(enemy.name)}"><i></i>weak <b>${count}</b></button>`
       : `<span class="status-pill status-${name}"><i></i>${escapeHtml(name)} <b>${count}</b></span>`)
     .join("") || '<span class="no-status">No status</span>';
 }

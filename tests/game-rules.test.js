@@ -46,7 +46,7 @@ test("poison budget is shared across rows", () => {
   assert.equal(game.poisonTotal, 3);
 });
 
-test("vulnerable loses one stack per health-damaging hit, including poison", () => {
+test("vulnerable loses one stack per ordinary health-damaging hit but not poison", () => {
   const enemy = new Enemy(definition, "enemy-1");
   enemy.addStatus("vulnerable", 3);
   enemy.addStatus("weak", 2);
@@ -58,8 +58,9 @@ test("vulnerable loses one stack per health-damaging hit, including poison", () 
   enemy.takeDamage(2);
   assert.equal(enemy.statuses.vulnerable, 2);
   enemy.takePoisonDamage(2);
-  assert.equal(enemy.statuses.vulnerable, 1);
+  assert.equal(enemy.statuses.vulnerable, 2);
   enemy.takeDamage(1);
+  assert.equal(enemy.statuses.vulnerable, 1);
   enemy.takeDamage(1);
   assert.equal(enemy.statuses.vulnerable, 0);
   assert.equal(enemy.statuses.weak, 2);
@@ -76,7 +77,7 @@ test("end turn preserves weak and vulnerable when no damage is taken", () => {
   assert.equal(enemy.statuses.vulnerable, 3);
 });
 
-test("end turn ticks poison through block, clears block and preserves weak", () => {
+test("end turn ticks poison through block, clears block and preserves weak and vulnerable", () => {
   const game = new GameState(1);
   const enemy = new Enemy(definition, "enemy-1");
   game.rows[0].enemies.push(enemy);
@@ -88,9 +89,13 @@ test("end turn ticks poison through block, clears block and preserves weak", () 
   assert.equal(enemy.health, 17);
   assert.equal(enemy.block, 0);
   assert.equal(enemy.statuses.weak, 2);
-  assert.equal(enemy.statuses.vulnerable, 0);
+  assert.equal(enemy.statuses.vulnerable, 1);
   assert.equal(enemy.currentAttackIndex, 1);
   assert.equal(game.turn, 2);
+  new TurnService().endTurn(game);
+  assert.equal(enemy.health, 14);
+  assert.equal(enemy.statuses.weak, 2);
+  assert.equal(enemy.statuses.vulnerable, 1);
 });
 
 test("spawning inserts at the front and resurrection preserves the enemy slot", () => {

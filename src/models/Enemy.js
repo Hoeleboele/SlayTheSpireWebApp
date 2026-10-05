@@ -40,7 +40,6 @@ export class Enemy {
   takePoisonDamage(amount) {
     const healthLost = Math.min(this.health, Math.max(0, Math.floor(amount)));
     this.health -= healthLost;
-    if (healthLost > 0) this.removeStatus(STATUS_TYPES.VULNERABLE);
     return healthLost;
   }
 
