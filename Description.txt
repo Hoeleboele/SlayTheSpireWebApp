@@ -1,0 +1,41 @@
+The app:
+will be a webapp that is made with javascript, html and css.
+will be build with all parts in different files split in the SOLID principle manner.
+the app will be mostly used on mobile phones and tablets but should scale to a pc screen as well.
+the app should be able to go into full screen landscape mode on mobile and tablets.
+css files should be split for pages and parts of the program.
+should be deployed when i push to main with a pipeline to githubpages.
+should be a tracker for enemies in slay the spire.
+It should show different enemies from a pool of enemies.
+The pool should be loaded from static variables in javascript files.
+Enemies should be an image of cards that i will add.
+Enemies should be in rows that are visible per row on the screen switchable when i press arrows up or down.
+I should be able to zoom out to show all rows.
+there should be a startup screen to setup the game with an number input field with 2 arrows for up and down to make the number higher or lower to a max of 4 and a min of 1.
+when the game is started on the startup screen you should go to the main screen where there should be 2 options: Get enemies and leave game.
+leaving should go back to the startupscreen.
+there can be multiple enemies in a row.
+there can be single enemies in a row.
+enemies should be able to gain a status effect when we are zoomed in on a row.
+available status effects are vulnerable, weak and poison.
+poison should have a shared global budget of 30 total over all rows and enemies.
+weak and vulnerable should have a max stack size of 3 per enemy.
+enemies should have a health track.
+health should go down by 1 or 5.
+enemies can heal health by 1 or 5 but not above max health.
+enemies should be changed to a death image when their health reaches 0.
+enemies should be able to be resurected.
+There should be an option on the main game screen to spawn an new enemy from a set list for that row.
+spawning should happen in a row and always in front of the current already available enemies.
+resurecting should always happen to full health.
+resurecting should always be in the same spot as they where before dieing.
+The main game screen should also have the option to end a turn.
+When ending a turn the enemies should lose a stack of vulnerable and weak.
+When ending a turn the enemies should lose health equal to poison stacks.
+When zoomed out i should be able to zoom back in to a row that i select.
+Enemies should also have a attack visual.
+The attack visual should only show what will happen in a text format.
+Enemies can have 3 diffent attack behaviour types.
+1. enemy just does an string attack every turn so no logic needed.
+2. enemy has a set loop of attacks that will cycle through the attacks every turn. i need to see all options and the current one selected. all should just be string options.
+3. enemy has attack types based on dice faces. the faces and types should be shown on the enemy.
