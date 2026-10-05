@@ -1,22 +1,43 @@
 export const AVAILABLE_ENEMIES = Object.freeze([
   {
-    id: "ashbound",
-    name: "Ashbound Initiate",
-    kind: "Cinder cultist",
-    maxHealth: 34,
-    image: "assets/images/ashbound.svg",
-    attackBehaviour: { type: "fixed", text: "Strike for 7" },
+    id: "cultist",
+    name: "Cultist",
+    kind: "Humanoid",
+    maxHealth: 9,
+    image: "assets/images/Cultist.webp",
+    attackBehaviour: { type: "fixed", text: "attack 1, gain 1 strength" },
   },
   {
-    id: "glasswarden",
-    name: "Glass Warden",
-    kind: "Ruined sentinel",
-    maxHealth: 48,
-    image: "assets/images/glasswarden.svg",
+    id: "fungibeast1",
+    name: "Fungi beast",
+    kind: "Wildlife",
+    maxHealth: 6,
+    image: "assets/images/Fungibeast.webp",
     attackBehaviour: {
-      type: "loop",
-      attacks: ["Shard volley · 8", "Brace · gain 6 block", "Heavy cut · 12"],
+      type: "dice",
+      faces: [
+        { range: "1–2", text: "attack 2" },
+        { range: "3–4", text: "attack 1 AOE, gain 1 strength" },
+        { range: "5–6", text: "gain 2 strength" },
+      ],
     },
+    passiveEffect: "Spore Cloud: On death, apply 1 vulnerable"
+  },
+  {
+    id: "fungibeast2",
+    name: "Fungi beast",
+    kind: "Wildlife",
+    maxHealth: 6,
+    image: "assets/images/Fungibeast.webp",
+    attackBehaviour: {
+      type: "dice",
+      faces: [
+        { range: "1–2", text: "gain 2 strength" },
+        { range: "3–4", text: "attack 2" },
+        { range: "5–6", text: "attack 1 AOE, gain 1 strength" },
+      ],
+    },
+    passiveEffect: "Spore Cloud: On death, apply 1 vulnerable"
   },
   {
     id: "mireling",
@@ -39,7 +60,7 @@ export const AVAILABLE_ENEMIES = Object.freeze([
     name: "Ironhowl Brute",
     kind: "Armored raider",
     maxHealth: 58,
-    image: "assets/images/glasswarden.svg",
+    image: "assets/images/ironhowl.svg",
     attackBehaviour: { type: "fixed", text: "Crush · 11" },
   },
 ]);
@@ -47,8 +68,8 @@ export const AVAILABLE_ENEMIES = Object.freeze([
 const definitions = new Map(AVAILABLE_ENEMIES.map((enemy) => [enemy.id, enemy]));
 
 export const ENEMY_POOL = Object.freeze([
-  { ...definitions.get("ashbound") },
-  { ...definitions.get("glasswarden"), companions: Object.freeze(["glasswarden"]) },
+  { ...definitions.get("cultist") },
+  { ...definitions.get("fungibeast1"), companions: Object.freeze(["fungibeast2"]) },
   { ...definitions.get("mireling"), companions: Object.freeze(["mireling", "mireling"]) },
   { ...definitions.get("ironhowl") },
 ]);
