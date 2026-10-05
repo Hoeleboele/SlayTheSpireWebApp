@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Serve enemy tracker",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"-m",
+				"http.server",
+				"4173",
+				"--bind",
+				"127.0.0.1"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

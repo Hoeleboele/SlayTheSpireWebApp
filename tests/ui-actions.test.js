@@ -137,3 +137,44 @@ test("leaving and starting a new game restores initial loading controls", () => 
   assert.doesNotMatch(buttonMarkup(controller, "get-enemies"), /disabled/);
   assert.match(buttonMarkup(controller, "spawn"), /disabled/);
 });
+
+test("card damage controls target their enemy without selecting it in either view", () => {
+  for (const zoomedOut of [false, true]) {
+    const controller = createController(2);
+    click(controller, "get-enemies");
+    controller.gameState.zoomedOut = zoomedOut;
+    controller.renderGame();
+    const [enemy, neighbour] = controller.gameState.rows[0].enemies;
+    enemy.adjustBlock(3);
+    const controls = controller.root.innerHTML.match(/<button class="card-damage-button"[^>]*>/g);
+    assert.ok(controls.length >= 4);
+    assert.ok(controls.some((markup) => markup.includes(`data-enemy-id="${enemy.id}"`) && markup.includes('data-amount="1"')));
+    assert.ok(controls.some((markup) => markup.includes(`data-enemy-id="${enemy.id}"`) && markup.includes('data-amount="5"')));
+    assert.match(controller.root.innerHTML, /<article class="enemy-card/);
+    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="card-damage-controls"/);
+    click(controller, "damage", { enemyId: enemy.id, amount: "1" });
+    assert.equal(enemy.block, 2);
+    assert.equal(enemy.health, enemy.maxHealth);
+    click(controller, "damage", { enemyId: enemy.id, amount: "5" });
+    assert.equal(enemy.block, 0);
+    assert.equal(enemy.health, enemy.maxHealth - 3);
+    assert.equal(neighbour.health, neighbour.maxHealth);
+    assert.equal(controller.gameState.selectedEnemyId, null);
+    assert.equal(controller.gameState.zoomedOut, zoomedOut);
+    assert.doesNotMatch(controller.root.innerHTML, /control-dialog/);
+    assert.ok(controller.root.innerHTML.includes(`>${enemy.health}<i>`));
+    enemy.health = 1;
+    click(controller, "damage", { enemyId: enemy.id, amount: "5" });
+    assert.equal(enemy.health, 0);
+    assert.match(controller.root.innerHTML, /assets\/images\/fallen.svg/);
+    const defeatedControls = controller.root.innerHTML.match(/<button class="card-damage-button"[^>]*>/g)
+      .filter((markup) => markup.includes(`data-enemy-id="${enemy.id}"`));
+    assert.equal(defeatedControls.length, 2);
+    assert.ok(defeatedControls.every((markup) => markup.includes("disabled")));
+    enemy.resurrect();
+    controller.renderGame();
+    const restoredControls = controller.root.innerHTML.match(/<button class="card-damage-button"[^>]*>/g)
+      .filter((markup) => markup.includes(`data-enemy-id="${enemy.id}"`));
+    assert.ok(restoredControls.every((markup) => !markup.includes("disabled")));
+  }
+});

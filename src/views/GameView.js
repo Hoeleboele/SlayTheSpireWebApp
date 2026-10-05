@@ -24,7 +24,8 @@ function enemyCard(enemy, rowIndex) {
   const image = enemy.isAlive ? enemy.image : "assets/images/fallen.svg";
   const behaviour = enemy.attackBehaviour;
   return `
-    <button class="enemy-card ${enemy.isAlive ? "" : "is-dead"}" type="button" data-action="select-enemy" data-enemy-id="${escapeHtml(enemy.id)}" data-row="${rowIndex}" aria-label="Select ${escapeHtml(enemy.name)}${enemy.isAlive ? "" : ", defeated"}">
+    <article class="enemy-card ${enemy.isAlive ? "" : "is-dead"}" data-enemy-id="${escapeHtml(enemy.id)}">
+    <button class="enemy-select" type="button" data-action="select-enemy" data-enemy-id="${escapeHtml(enemy.id)}" data-row="${rowIndex}" aria-label="Select ${escapeHtml(enemy.name)}${enemy.isAlive ? "" : ", defeated"}">
       <span class="enemy-art"><img src="${escapeHtml(image)}" alt="" draggable="false"><span class="art-index">${String(rowIndex + 1).padStart(2, "0")}</span>${enemy.isAlive ? "" : '<span class="defeated-stamp">DEFEATED</span>'}</span>
       <span class="enemy-content">
         <span class="enemy-heading"><span><span class="enemy-kind">${escapeHtml(enemy.kind)}</span><strong>${escapeHtml(enemy.name)}</strong></span><span class="select-mark" aria-hidden="true">↗</span></span>
@@ -35,7 +36,12 @@ function enemyCard(enemy, rowIndex) {
         <span class="status-list">${statusPills(enemy)}</span>
         <span class="attack-box"><span class="attack-label"><span>INTENT</span><span>${behaviour.type === "loop" ? `CYCLE ${enemy.currentAttackIndex + 1}/${behaviour.attacks.length}` : behaviour.type === "dice" ? "D6" : "REPEAT"}</span></span>${attackMarkup(enemy)}</span>
       </span>
-    </button>`;
+    </button>
+    <div class="card-damage-controls" role="group" aria-label="Damage ${escapeHtml(enemy.name)}">
+      <span>Damage</span>
+      ${[1, 5].map((amount) => `<button class="card-damage-button" type="button" data-action="damage" data-amount="${amount}" data-enemy-id="${escapeHtml(enemy.id)}" title="Deal ${amount} damage to ${escapeHtml(enemy.name)}" aria-label="Deal ${amount} damage to ${escapeHtml(enemy.name)}" ${enemy.isAlive ? "" : "disabled"}>-${amount}</button>`).join("")}
+    </div>
+    </article>`;
 }
 
 function rowMarkup(row, index, state) {
