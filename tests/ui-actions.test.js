@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ENEMY_POOL } from "../src/data/enemies.js";
+import { ENEMY_POOL, ENCOUNTER_PRESETS } from "../src/data/enemies.js";
 import { Enemy } from "../src/models/Enemy.js";
 import { GameState } from "../src/models/GameState.js";
 import { GameView } from "../src/views/GameView.js";
@@ -136,6 +136,78 @@ test("loading controls populate once and unlock front-of-row spawning", () => {
   }
 });
 
+test("Clear rows appears only after all enemies are defeated, including spawned enemies", () => {
+  const controller = createController(2);
+  const state = controller.gameState;
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
+  click(controller, "clear-rows");
+  assert.equal(state.enemiesLoaded, false);
+  click(controller, "get-enemies");
+  const originalRows = state.rows.map((row) => row.enemies);
+  click(controller, "clear-rows");
+  state.rows.forEach((row, index) => assert.equal(row.enemies, originalRows[index]));
+  for (const enemy of state.rows[0].enemies) click(controller, "kill", { enemyId: enemy.id });
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
+  const last = state.rows[1].enemies[0];
+  click(controller, "kill", { enemyId: last.id });
+  assert.match(buttonMarkup(controller, "clear-rows"), /secondary-button/);
+  assert.match(controller.root.innerHTML, /data-action="get-enemies"[^>]*>Get enemies<\/button>\s*<button[^>]*data-action="clear-rows"[^>]*>Clear rows<\/button>/);
+  click(controller, "resurrect", { enemyId: last.id });
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
+  click(controller, "kill", { enemyId: last.id });
+  const history = [...state.encounterHistory];
+  click(controller, "spawn", { row: "0" });
+  assert.deepEqual([...state.encounterHistory], history);
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
+  click(controller, "clear-rows");
+  assert.equal(state.enemiesLoaded, true);
+  click(controller, "kill", { enemyId: state.rows[0].enemies[0].id });
+  assert.ok(buttonMarkup(controller, "clear-rows"));
+});
+
+test("clearing resets turn and view and enables loading new groups across cycles", () => {
+  const controller = createController(4);
+  const state = controller.gameState;
+  for (const indexes of [[0, 1, 2, 3], [4, 5, 0, 1], [2, 3, 0, 1]]) {
+    click(controller, "get-enemies");
+    assert.deepEqual(state.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
+      indexes.map((index) => ENCOUNTER_PRESETS[index].enemyIds));
+    click(controller, "end-turn");
+    click(controller, "select-row", { row: "3" });
+    click(controller, "toggle-overview");
+    const enemies = state.rows.flatMap((row) => row.enemies);
+    enemies[0].addStatus("poison", 2);
+    for (const enemy of enemies) click(controller, "kill", { enemyId: enemy.id });
+    const history = [...state.encounterHistory];
+    state.selectedEnemyId = enemies[0].id;
+    click(controller, "clear-rows");
+    assert.equal(state.turn, 1);
+    assert.equal(state.activeRow, 0);
+    assert.equal(state.zoomedOut, false);
+    assert.equal(state.selectedEnemyId, null);
+    assert.equal(state.poisonTotal, 0);
+    assert.deepEqual([...state.encounterHistory], history);
+    assert.ok(state.rows.every((row) => row.enemies.length === 0));
+    assert.doesNotMatch(controller.root.innerHTML, /enemy-card|control-dialog|data-action="clear-rows"/);
+    assert.doesNotMatch(buttonMarkup(controller, "get-enemies"), /disabled/);
+    assert.match(buttonMarkup(controller, "spawn"), /disabled/);
+    click(controller, "spawn", { row: "0" });
+    assert.equal(state.rows[0].enemies.length, 0);
+  }
+});
+
+test("poison defeating the last enemy makes Clear rows available", () => {
+  const controller = createController(1);
+  controller.enemyPool = new EnemyPoolService(ENEMY_POOL, () => 0, [ENCOUNTER_PRESETS[1]]);
+  click(controller, "get-enemies");
+  const enemy = controller.gameState.rows[0].enemies[0];
+  enemy.takeDamage(enemy.health - 1);
+  enemy.addStatus("poison", 1);
+  click(controller, "end-turn");
+  assert.equal(enemy.isAlive, false);
+  assert.ok(buttonMarkup(controller, "clear-rows"));
+});
+
 test("navigation and overview remain usable before and after enemy population", () => {
   const controller = createController(4);
   for (const loaded of [false, true]) {
@@ -181,6 +253,11 @@ test("leaving and starting a new game restores initial loading controls", () => 
   assert.ok(controller.gameState.rows.every((row) => row.enemies.length === 0));
   assert.doesNotMatch(buttonMarkup(controller, "get-enemies"), /disabled/);
   assert.match(buttonMarkup(controller, "spawn"), /disabled/);
+  assert.equal(controller.gameState.encounterHistory.size, 0);
+  assert.doesNotMatch(controller.root.innerHTML, /data-action="clear-rows"/);
+  click(controller, "get-enemies");
+  assert.deepEqual(controller.gameState.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
+    ENCOUNTER_PRESETS.slice(0, 4).map((preset) => preset.enemyIds));
 });
 
 test("clicking the weak tag removes one stack only on its enemy in either view", () => {

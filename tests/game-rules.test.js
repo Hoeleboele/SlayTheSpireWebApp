@@ -159,16 +159,100 @@ test("initial population happens once and a new game resets availability", () =>
   const service = new EnemyPoolService(ENEMY_POOL, () => 0);
   service.populateRows(game);
   const enemies = game.rows[0].enemies;
+  const history = [...game.encounterHistory];
   enemies[0].takeDamage(5);
   enemies[0].addStatus("weak");
   service.populateRows(game);
   assert.equal(game.rows[0].enemies, enemies);
   assert.equal(enemies[0].health, enemies[0].maxHealth - 5);
   assert.equal(enemies[0].statuses.weak, 1);
+  assert.deepEqual([...game.encounterHistory], history);
   const fresh = new GameState(1);
   assert.equal(fresh.enemiesLoaded, false);
   service.populateRows(fresh);
   assert.notEqual(fresh.rows[0].enemies[0].id, enemies[0].id);
+  assert.deepEqual([...fresh.encounterHistory], [ENCOUNTER_PRESETS[0].id]);
+});
+
+test("later loads use unseen presets and exclude current groups when restarting mid-load", () => {
+  const game = new GameState(4);
+  const service = new EnemyPoolService(ENEMY_POOL, () => 0);
+  const expectedLoads = [[0, 1, 2, 3], [4, 5, 0, 1], [2, 3, 0, 1], [4, 5, 0, 1]];
+  const previousEnemies = new Set();
+  for (const presetIndexes of expectedLoads) {
+    service.populateRows(game);
+    assert.deepEqual(game.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
+      presetIndexes.map((index) => ENCOUNTER_PRESETS[index].enemyIds));
+    assert.equal(new Set(presetIndexes).size, game.rows.length);
+    assert.deepEqual([...game.encounterHistory], presetIndexes.map((index) => ENCOUNTER_PRESETS[index].id));
+    for (const enemy of game.rows.flatMap((row) => row.enemies)) {
+      assert.equal(previousEnemies.has(enemy.id), false);
+      assert.equal(enemy.health, enemy.maxHealth);
+      assert.equal(enemy.block, 0);
+      assert.ok(Object.values(enemy.statuses).every((count) => count === 0));
+      previousEnemies.add(enemy.id);
+      enemy.takeDamage(100);
+    }
+    assert.equal(game.clearRows(), true);
+  }
+});
+
+test("the pool restarts on the next load after exact exhaustion", () => {
+  const game = new GameState(3);
+  const service = new EnemyPoolService(ENEMY_POOL, () => 0);
+  for (const presetIndexes of [[0, 1, 2], [3, 4, 5], [0, 1, 2]]) {
+    service.populateRows(game);
+    assert.deepEqual(game.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
+      presetIndexes.map((index) => ENCOUNTER_PRESETS[index].enemyIds));
+    game.rows.flatMap((row) => row.enemies).forEach((enemy) => enemy.takeDamage(100));
+    assert.equal(game.clearRows(), true);
+  }
+  assert.deepEqual([...game.encounterHistory], ENCOUNTER_PRESETS.slice(0, 3).map((preset) => preset.id));
+});
+
+test("clearing requires all enemies defeated and resets the encounter without losing history", () => {
+  const game = new GameState(2);
+  const rows = [...game.rows];
+  assert.equal(game.canClearRows, false);
+  assert.equal(game.clearRows(), false);
+  game.enemiesLoaded = true;
+  assert.equal(game.canClearRows, false);
+  const first = new Enemy(definition, "first");
+  const second = new Enemy(definition, "second");
+  game.rows[0].enemies.push(first);
+  game.rows[1].enemies.push(second);
+  game.encounterHistory.add("seen-preset");
+  game.turn = 5;
+  game.activeRow = 1;
+  game.zoomedOut = true;
+  game.selectedEnemyId = second.id;
+  first.takeDamage(100);
+  assert.equal(game.clearRows(), false);
+  assert.equal(game.turn, 5);
+  assert.equal(game.rows[1].enemies[0], second);
+  second.addStatus("poison", 2);
+  second.takeDamage(100);
+  assert.equal(game.canClearRows, true);
+  second.resurrect();
+  assert.equal(game.canClearRows, false);
+  second.takeDamage(100);
+  const spawned = new Enemy(definition, "spawned");
+  game.rows[0].enemies.unshift(spawned);
+  assert.equal(game.canClearRows, false);
+  spawned.takeDamage(100);
+  assert.equal(game.clearRows(), true);
+  game.rows.forEach((row, index) => {
+    assert.equal(row, rows[index]);
+    assert.deepEqual(row.enemies, []);
+  });
+  assert.equal(game.turn, 1);
+  assert.equal(game.activeRow, 0);
+  assert.equal(game.zoomedOut, false);
+  assert.equal(game.selectedEnemyId, null);
+  assert.equal(game.enemiesLoaded, false);
+  assert.equal(game.poisonTotal, 0);
+  assert.deepEqual([...game.encounterHistory], ["seen-preset"]);
+  assert.equal(game.canClearRows, false);
 });
 
 test("invalid preset data cannot partially populate the encounter", () => {
@@ -180,9 +264,11 @@ test("invalid preset data cannot partially populate the encounter", () => {
     const game = new GameState(2);
     const original = new Enemy(definition, "original");
     game.rows[0].enemies.push(original);
+    game.encounterHistory.add(ENCOUNTER_PRESETS[0].id);
     assert.throws(() => new EnemyPoolService(ENEMY_POOL, () => 0, presets).populateRows(game),
       /Not enough encounter presets|Unknown enemy|Empty encounter preset/);
     assert.deepEqual(game.rows.map((row) => row.enemies), [[original], []]);
     assert.equal(game.enemiesLoaded, false);
+    assert.deepEqual([...game.encounterHistory], [ENCOUNTER_PRESETS[0].id]);
   }
 });

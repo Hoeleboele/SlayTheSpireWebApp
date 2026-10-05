@@ -67,6 +67,9 @@ export class AppController {
         if (state.enemiesLoaded) return;
         this.enemyPool.populateRows(state);
         break;
+      case "clear-rows":
+        if (!state.clearRows()) return;
+        break;
       case "end-turn": this.turns.endTurn(state); break;
       case "toggle-overview": state.zoomedOut = !state.zoomedOut; break;
       case "select-row": state.activeRow = Number(button.dataset.row); state.zoomedOut = false; break;

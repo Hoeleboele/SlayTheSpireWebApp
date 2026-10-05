@@ -19,20 +19,31 @@ export class EnemyPoolService {
       throw new Error("Not enough encounter presets to fill every row.");
     }
     const definitions = new Map(this.pool.map((definition) => [definition.id, definition]));
-    const available = this.presets.map((preset) => {
+    const combinations = this.presets.map((preset) => {
       if (!preset.enemyIds?.length) throw new Error(`Empty encounter preset: ${preset.id}`);
-      return preset.enemyIds.map((enemyId) => {
+      const enemies = preset.enemyIds.map((enemyId) => {
         const definition = definitions.get(enemyId);
         if (!definition) throw new Error(`Unknown enemy in encounter preset: ${enemyId}`);
         return definition;
       });
+      return { id: preset.id, enemies };
     });
+    let history = new Set(gameState.encounterHistory);
+    const chosen = new Set();
     const populatedRows = gameState.rows.map(() => {
+      let available = combinations.filter((combination) => !history.has(combination.id));
+      if (!available.length) {
+        history = new Set(chosen);
+        available = combinations.filter((combination) => !history.has(combination.id));
+      }
       const index = Math.floor(this.random() * available.length);
-      const [combination] = available.splice(index, 1);
-      return combination.map((definition) => new Enemy(definition));
+      const combination = available[index];
+      chosen.add(combination.id);
+      history.add(combination.id);
+      return combination.enemies.map((definition) => new Enemy(definition));
     });
     gameState.rows.forEach((row, index) => { row.enemies = populatedRows[index]; });
+    gameState.encounterHistory = history;
     gameState.enemiesLoaded = true;
   }
 

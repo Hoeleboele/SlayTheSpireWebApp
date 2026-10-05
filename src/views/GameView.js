@@ -95,6 +95,7 @@ export class GameView {
           <div class="encounter-title"><span class="live-dot"></span><span><small>ACTIVE ENCOUNTER</small><strong>${state.zoomedOut ? "All rows" : `Row ${state.activeRow + 1} <i>/ ${state.rows.length}</i>`}</strong></span></div>
           <div class="toolbar-actions">
             <button class="secondary-button" type="button" data-action="get-enemies" ${state.enemiesLoaded ? "disabled" : ""}>Get enemies</button>
+            ${state.canClearRows ? '<button class="secondary-button" type="button" data-action="clear-rows">Clear rows</button>' : ""}
             <button class="secondary-button overview-toggle" type="button" data-action="toggle-overview">${state.zoomedOut ? "Focus row" : "Show all rows"}</button>
             <button class="primary-button end-turn-button" type="button" data-action="end-turn">End turn <span aria-hidden="true">↗</span></button>
             <button class="leave-button" type="button" data-action="leave">Leave</button>
