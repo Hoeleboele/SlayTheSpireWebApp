@@ -81,6 +81,7 @@ export class AppController {
       case "heal": selected?.heal(Number(button.dataset.amount)); break;
       case "block": selected?.adjustBlock(Number(button.dataset.amount)); break;
       case "reduce-weak": selected?.removeStatus(STATUS_TYPES.WEAK); break;
+      case "reduce-vulnerable": selected?.removeStatus(STATUS_TYPES.VULNERABLE); break;
       case "status-add": {
         const type = button.dataset.amount;
         if (type === STATUS_TYPES.POISON) this.poison.add(state, selected);

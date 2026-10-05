@@ -196,7 +196,7 @@ test("clicking the weak tag removes one stack only on its enemy in either view",
     const tag = buttonMarkup(controller, "reduce-weak");
     assert.ok(tag.includes(`data-enemy-id="${enemy.id}"`));
     assert.match(tag, /aria-label="Remove one Weak stack from/);
-    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="status-list"><span[^>]*>[\s\S]*?<button[^>]*data-action="reduce-weak"/);
+    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="status-list"><button[^>]*data-action="reduce-vulnerable"[\s\S]*?<button[^>]*data-action="reduce-weak"/);
     for (const remaining of [2, 1, 0]) {
       click(controller, "reduce-weak", { enemyId: enemy.id });
       assert.equal(enemy.statuses.weak, remaining);
@@ -216,6 +216,38 @@ test("clicking the weak tag removes one stack only on its enemy in either view",
     assert.ok(remainingTags[0].includes(`data-enemy-id="${neighbour.id}"`));
     click(controller, "reduce-weak", { enemyId: "missing" });
     assert.equal(neighbour.statuses.weak, 2);
+  }
+});
+
+test("clicking the vulnerable tag removes one stack only on its enemy in either view", () => {
+  for (const zoomedOut of [false, true]) {
+    const controller = createController(2);
+    click(controller, "get-enemies");
+    controller.gameState.zoomedOut = zoomedOut;
+    const [enemy, neighbour] = controller.gameState.rows[0].enemies;
+    enemy.addStatus("vulnerable", 3);
+    enemy.addStatus("weak", 2);
+    neighbour.addStatus("vulnerable", 2);
+    controller.renderGame();
+    const tag = buttonMarkup(controller, "reduce-vulnerable");
+    assert.ok(tag.includes(`data-enemy-id="${enemy.id}"`));
+    assert.match(tag, /aria-label="Remove one Vulnerable stack from/);
+    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="status-list"><button[^>]*data-action="reduce-vulnerable"/);
+    for (const remaining of [2, 1, 0]) {
+      click(controller, "reduce-vulnerable", { enemyId: enemy.id });
+      assert.equal(enemy.statuses.vulnerable, remaining);
+      const tags = controller.root.innerHTML.match(/<button[^>]*data-action="reduce-vulnerable"[^>]*>/g);
+      assert.equal(tags.some((markup) => markup.includes(`data-enemy-id="${enemy.id}"`)), remaining > 0);
+      assert.equal(enemy.statuses.weak, 2);
+      assert.equal(neighbour.statuses.vulnerable, 2);
+      assert.equal(enemy.health, enemy.maxHealth);
+      assert.equal(controller.gameState.selectedEnemyId, null);
+      assert.equal(controller.gameState.zoomedOut, zoomedOut);
+    }
+    click(controller, "reduce-vulnerable", { enemyId: enemy.id });
+    assert.equal(enemy.statuses.vulnerable, 0);
+    click(controller, "reduce-vulnerable", { enemyId: "missing" });
+    assert.equal(neighbour.statuses.vulnerable, 2);
   }
 });
 

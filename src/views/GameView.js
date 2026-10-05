@@ -3,8 +3,8 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 function statusPills(enemy) {
   return Object.entries(enemy.statuses)
     .filter(([, count]) => count > 0)
-    .map(([name, count]) => name === "weak"
-      ? `<button class="status-pill status-weak" type="button" data-action="reduce-weak" data-enemy-id="${escapeHtml(enemy.id)}" title="Remove one Weak stack" aria-label="Remove one Weak stack from ${escapeHtml(enemy.name)}"><i></i>weak <b>${count}</b></button>`
+    .map(([name, count]) => name === "weak" || name === "vulnerable"
+      ? `<button class="status-pill status-${name}" type="button" data-action="reduce-${name}" data-enemy-id="${escapeHtml(enemy.id)}" title="Remove one ${name === "weak" ? "Weak" : "Vulnerable"} stack" aria-label="Remove one ${name === "weak" ? "Weak" : "Vulnerable"} stack from ${escapeHtml(enemy.name)}"><i></i>${escapeHtml(name)} <b>${count}</b></button>`
       : `<span class="status-pill status-${name}"><i></i>${escapeHtml(name)} <b>${count}</b></span>`)
     .join("") || '<span class="no-status">No status</span>';
 }
