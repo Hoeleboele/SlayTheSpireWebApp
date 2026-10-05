@@ -46,7 +46,37 @@ test("poison budget is shared across rows", () => {
   assert.equal(game.poisonTotal, 3);
 });
 
-test("end turn ticks poison through block, clears block and decays statuses", () => {
+test("vulnerable loses one stack per health-damaging hit, including poison", () => {
+  const enemy = new Enemy(definition, "enemy-1");
+  enemy.addStatus("vulnerable", 3);
+  enemy.addStatus("weak", 2);
+  enemy.adjustBlock(5);
+  enemy.takeDamage(0);
+  enemy.takeDamage(5);
+  enemy.takePoisonDamage(0);
+  assert.equal(enemy.statuses.vulnerable, 3);
+  enemy.takeDamage(2);
+  assert.equal(enemy.statuses.vulnerable, 2);
+  enemy.takePoisonDamage(2);
+  assert.equal(enemy.statuses.vulnerable, 1);
+  enemy.takeDamage(1);
+  enemy.takeDamage(1);
+  assert.equal(enemy.statuses.vulnerable, 0);
+  assert.equal(enemy.statuses.weak, 2);
+});
+
+test("end turn preserves weak and vulnerable when no damage is taken", () => {
+  const game = new GameState(1);
+  const enemy = new Enemy(definition, "enemy-1");
+  game.rows[0].enemies.push(enemy);
+  enemy.addStatus("weak", 2);
+  enemy.addStatus("vulnerable", 3);
+  new TurnService().endTurn(game);
+  assert.equal(enemy.statuses.weak, 2);
+  assert.equal(enemy.statuses.vulnerable, 3);
+});
+
+test("end turn ticks poison through block, clears block and preserves weak", () => {
   const game = new GameState(1);
   const enemy = new Enemy(definition, "enemy-1");
   game.rows[0].enemies.push(enemy);
@@ -57,7 +87,7 @@ test("end turn ticks poison through block, clears block and decays statuses", ()
   new TurnService().endTurn(game);
   assert.equal(enemy.health, 17);
   assert.equal(enemy.block, 0);
-  assert.equal(enemy.statuses.weak, 1);
+  assert.equal(enemy.statuses.weak, 2);
   assert.equal(enemy.statuses.vulnerable, 0);
   assert.equal(enemy.currentAttackIndex, 1);
   assert.equal(game.turn, 2);

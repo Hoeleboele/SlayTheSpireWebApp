@@ -3,7 +3,9 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 function statusPills(enemy) {
   return Object.entries(enemy.statuses)
     .filter(([, count]) => count > 0)
-    .map(([name, count]) => `<span class="status-pill status-${name}"><i></i>${escapeHtml(name)} <b>${count}</b></span>`)
+    .map(([name, count]) => name === "weak"
+      ? `<button class="status-pill status-weak" type="button" data-action="clear-weak" data-enemy-id="${escapeHtml(enemy.id)}" title="Remove Weak" aria-label="Remove Weak from ${escapeHtml(enemy.name)}"><i></i>weak <b>${count}</b></button>`
+      : `<span class="status-pill status-${name}"><i></i>${escapeHtml(name)} <b>${count}</b></span>`)
     .join("") || '<span class="no-status">No status</span>';
 }
 
@@ -33,10 +35,10 @@ function enemyCard(enemy, rowIndex) {
           <span class="vital health-vital"><small>HEALTH</small><b>${enemy.health}<i> / ${enemy.maxHealth}</i></b><span class="meter"><i style="width:${Math.max(0, enemy.health / enemy.maxHealth * 100)}%"></i></span></span>
           <span class="vital block-vital"><small>BLOCK</small><b>${enemy.block}</b><span class="block-mark" aria-hidden="true">▧</span></span>
         </span>
-        <span class="status-list">${statusPills(enemy)}</span>
         <span class="attack-box"><span class="attack-label"><span>INTENT</span><span>${behaviour.type === "loop" ? `CYCLE ${enemy.currentAttackIndex + 1}/${behaviour.attacks.length}` : behaviour.type === "dice" ? "D6" : "REPEAT"}</span></span>${attackMarkup(enemy)}</span>
       </span>
     </button>
+    <div class="status-list">${statusPills(enemy)}</div>
     <div class="card-damage-controls" role="group" aria-label="Damage ${escapeHtml(enemy.name)}">
       <span>Damage</span>
       ${[1, 5].map((amount) => `<button class="card-damage-button" type="button" data-action="damage" data-amount="${amount}" data-enemy-id="${escapeHtml(enemy.id)}" title="Deal ${amount} damage to ${escapeHtml(enemy.name)}" aria-label="Deal ${amount} damage to ${escapeHtml(enemy.name)}" ${enemy.isAlive ? "" : "disabled"}>-${amount}</button>`).join("")}
@@ -54,7 +56,7 @@ function rowMarkup(row, index, state) {
         </button>
         ${active ? `<button class="spawn-button" type="button" data-action="spawn" data-row="${index}" ${state.enemiesLoaded ? "" : "disabled"}><span aria-hidden="true">＋</span> Spawn enemy</button>` : `<span class="enemy-count">${row.enemies.length} ${row.enemies.length === 1 ? "ENEMY" : "ENEMIES"}</span>`}
       </header>
-      ${row.enemies.length ? `<div class="enemy-grid">${row.enemies.map((enemy) => enemyCard(enemy, index)).join("")}</div>` : '<div class="empty-row"><span>—</span><p>Lane is clear. Get enemies to begin.</p></div>'}
+      ${row.enemies.length ? `<div class="enemy-grid" tabindex="0" role="region" aria-label="Row ${index + 1} enemies">${row.enemies.map((enemy) => enemyCard(enemy, index)).join("")}</div>` : '<div class="empty-row"><span>—</span><p>Lane is clear. Get enemies to begin.</p></div>'}
     </section>`;
 }
 
@@ -79,6 +81,9 @@ function controlPanel(state) {
 
 export class GameView {
   render(root, state) {
+    const scrollPositions = new Map(Array.from(root.querySelectorAll?.(".battle-row") ?? [], (row) => [
+      row.dataset.rowIndex, row.querySelector(".enemy-grid")?.scrollLeft ?? 0,
+    ]));
     const currentRow = state.rows[state.activeRow];
     root.innerHTML = `
       <section class="game-screen ${state.zoomedOut ? "is-overview" : ""}">
@@ -104,5 +109,9 @@ export class GameView {
         ${controlPanel(state)}
       </section>`;
     if (state.selectedEnemyId) root.querySelector(".control-dialog")?.showModal();
+    for (const row of root.querySelectorAll?.(".battle-row") ?? []) {
+      const grid = row.querySelector(".enemy-grid");
+      if (grid) grid.scrollLeft = scrollPositions.get(row.dataset.rowIndex) ?? 0;
+    }
   }
 }

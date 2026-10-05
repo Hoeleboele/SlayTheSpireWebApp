@@ -32,6 +32,25 @@ function buttonMarkup(controller, action) {
   return markup[0];
 }
 
+test("rerendering preserves horizontal scrolling independently for each visible row", () => {
+  const state = new GameState(2);
+  state.zoomedOut = true;
+  const previous = [280, 410].map((scrollLeft, index) => ({
+    dataset: { rowIndex: String(index) }, querySelector: () => ({ scrollLeft }),
+  }));
+  const grids = [{ scrollLeft: 0 }, { scrollLeft: 0 }];
+  const rendered = grids.map((grid, index) => ({
+    dataset: { rowIndex: String(index) }, querySelector: () => grid,
+  }));
+  let rows = previous;
+  const root = {
+    set innerHTML(markup) { rows = rendered; },
+    querySelectorAll: () => rows,
+  };
+  new GameView().render(root, state);
+  assert.deepEqual(grids.map((grid) => grid.scrollLeft), [280, 410]);
+});
+
 test("backdrop clicks close enemy controls but clicks inside the dialog do not", () => {
   const controller = createController(1);
   click(controller, "get-enemies");
@@ -113,7 +132,7 @@ test("loading controls populate once and unlock front-of-row spawning", () => {
     assert.equal(state.rows[0].enemies[1], original);
     click(controller, "end-turn");
     assert.equal(state.turn, 2);
-    assert.equal(original.statuses.weak, 0);
+    assert.equal(original.statuses.weak, 1);
   }
 });
 
@@ -164,6 +183,34 @@ test("leaving and starting a new game restores initial loading controls", () => 
   assert.match(buttonMarkup(controller, "spawn"), /disabled/);
 });
 
+test("clicking the weak tag clears all stacks only on its enemy in either view", () => {
+  for (const zoomedOut of [false, true]) {
+    const controller = createController(2);
+    click(controller, "get-enemies");
+    controller.gameState.zoomedOut = zoomedOut;
+    const [enemy, neighbour] = controller.gameState.rows[0].enemies;
+    enemy.addStatus("weak", 3);
+    enemy.addStatus("vulnerable", 2);
+    neighbour.addStatus("weak", 2);
+    controller.renderGame();
+    const tag = buttonMarkup(controller, "clear-weak");
+    assert.ok(tag.includes(`data-enemy-id="${enemy.id}"`));
+    assert.match(tag, /aria-label="Remove Weak from/);
+    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="status-list"><span[^>]*>[\s\S]*?<button[^>]*data-action="clear-weak"/);
+    click(controller, "clear-weak", { enemyId: enemy.id });
+    assert.equal(enemy.statuses.weak, 0);
+    assert.equal(enemy.statuses.vulnerable, 2);
+    assert.equal(neighbour.statuses.weak, 2);
+    assert.equal(controller.gameState.selectedEnemyId, null);
+    assert.equal(controller.gameState.zoomedOut, zoomedOut);
+    const remainingTags = controller.root.innerHTML.match(/<button[^>]*data-action="clear-weak"[^>]*>/g);
+    assert.equal(remainingTags.length, 1);
+    assert.ok(remainingTags[0].includes(`data-enemy-id="${neighbour.id}"`));
+    click(controller, "clear-weak", { enemyId: "missing" });
+    assert.equal(neighbour.statuses.weak, 2);
+  }
+});
+
 test("card damage controls target their enemy without selecting it in either view", () => {
   for (const zoomedOut of [false, true]) {
     const controller = createController(2);
@@ -177,7 +224,7 @@ test("card damage controls target their enemy without selecting it in either vie
     assert.ok(controls.some((markup) => markup.includes(`data-enemy-id="${enemy.id}"`) && markup.includes('data-amount="1"')));
     assert.ok(controls.some((markup) => markup.includes(`data-enemy-id="${enemy.id}"`) && markup.includes('data-amount="5"')));
     assert.match(controller.root.innerHTML, /<article class="enemy-card/);
-    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="card-damage-controls"/);
+    assert.match(controller.root.innerHTML, /<\/button>\s*<div class="status-list">[\s\S]*?<\/div>\s*<div class="card-damage-controls"/);
     click(controller, "damage", { enemyId: enemy.id, amount: "1" });
     assert.equal(enemy.block, 2);
     assert.equal(enemy.health, enemy.maxHealth);

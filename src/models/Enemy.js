@@ -33,12 +33,14 @@ export class Enemy {
     const blocked = Math.min(this.block, damage);
     this.block -= blocked;
     this.health = Math.max(0, this.health - (damage - blocked));
+    if (damage > blocked) this.removeStatus(STATUS_TYPES.VULNERABLE);
     return { blocked, healthLost: damage - blocked, health: this.health, block: this.block };
   }
 
   takePoisonDamage(amount) {
     const healthLost = Math.min(this.health, Math.max(0, Math.floor(amount)));
     this.health -= healthLost;
+    if (healthLost > 0) this.removeStatus(STATUS_TYPES.VULNERABLE);
     return healthLost;
   }
 
