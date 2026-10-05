@@ -5,6 +5,7 @@ import { GameState } from "../src/models/GameState.js";
 import { PoisonBudgetService } from "../src/services/PoisonBudgetService.js";
 import { EnemyPoolService } from "../src/services/EnemyPoolService.js";
 import { TurnService } from "../src/services/TurnService.js";
+import { ENEMY_POOL, ENCOUNTER_PRESETS } from "../src/data/enemies.js";
 
 const definition = {
   id: "test",
@@ -74,4 +75,79 @@ test("spawning inserts at the front and resurrection preserves the enemy slot", 
   original.resurrect();
   assert.equal(game.rows[0].enemies[1], original);
   assert.equal(original.health, original.maxHealth);
+});
+
+test("preset population fills four rows with distinct ordered combinations", () => {
+  const game = new GameState(4);
+  const originalRows = [...game.rows];
+  game.activeRow = 2;
+  game.zoomedOut = true;
+  game.turn = 3;
+  new EnemyPoolService(ENEMY_POOL, () => 0).populateRows(game);
+  assert.deepEqual(game.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
+    ENCOUNTER_PRESETS.slice(0, 4).map((preset) => preset.enemyIds));
+  game.rows.forEach((row, index) => assert.equal(row, originalRows[index]));
+  assert.equal(game.enemiesLoaded, true);
+  assert.equal(game.activeRow, 2);
+  assert.equal(game.zoomedOut, true);
+  assert.equal(game.turn, 3);
+  const enemies = game.rows.flatMap((row) => row.enemies);
+  assert.equal(new Set(enemies.map((enemy) => enemy.id)).size, enemies.length);
+  assert.notEqual(enemies[0], enemies[1]);
+  enemies[0].takeDamage(1);
+  assert.equal(enemies[1].health, enemies[1].maxHealth);
+});
+
+test("all six approved presets resolve to existing enemy definitions", () => {
+  const expected = [
+    ["ashbound", "ashbound"], ["glasswarden"], ["mireling", "mireling", "mireling"],
+    ["ironhowl"], ["ashbound", "mireling"], ["glasswarden", "ashbound"],
+  ];
+  assert.deepEqual(ENCOUNTER_PRESETS.map((preset) => preset.enemyIds), expected);
+  assert.equal(new Set(ENCOUNTER_PRESETS.map((preset) => preset.id)).size, expected.length);
+  ENCOUNTER_PRESETS.forEach((preset, index) => {
+    const game = new GameState(1);
+    new EnemyPoolService(ENEMY_POOL, () => 0, [preset]).populateRows(game);
+    assert.deepEqual(game.rows[0].enemies.map((enemy) => enemy.definitionId), expected[index]);
+  });
+});
+
+test("selection draws from remaining presets rather than repeating a random group", () => {
+  const game = new GameState(4);
+  new EnemyPoolService(ENEMY_POOL, () => 0.999).populateRows(game);
+  assert.deepEqual(game.rows.map((row) => row.enemies.map((enemy) => enemy.definitionId)),
+    ENCOUNTER_PRESETS.slice(2).reverse().map((preset) => preset.enemyIds));
+});
+
+test("initial population happens once and a new game resets availability", () => {
+  const game = new GameState(1);
+  const service = new EnemyPoolService(ENEMY_POOL, () => 0);
+  service.populateRows(game);
+  const enemies = game.rows[0].enemies;
+  enemies[0].takeDamage(5);
+  enemies[0].addStatus("weak");
+  service.populateRows(game);
+  assert.equal(game.rows[0].enemies, enemies);
+  assert.equal(enemies[0].health, enemies[0].maxHealth - 5);
+  assert.equal(enemies[0].statuses.weak, 1);
+  const fresh = new GameState(1);
+  assert.equal(fresh.enemiesLoaded, false);
+  service.populateRows(fresh);
+  assert.notEqual(fresh.rows[0].enemies[0].id, enemies[0].id);
+});
+
+test("invalid preset data cannot partially populate the encounter", () => {
+  for (const presets of [
+    [ENCOUNTER_PRESETS[0]],
+    [ENCOUNTER_PRESETS[0], { id: "invalid", enemyIds: ["missing"] }],
+    [ENCOUNTER_PRESETS[0], { id: "empty", enemyIds: [] }],
+  ]) {
+    const game = new GameState(2);
+    const original = new Enemy(definition, "original");
+    game.rows[0].enemies.push(original);
+    assert.throws(() => new EnemyPoolService(ENEMY_POOL, () => 0, presets).populateRows(game),
+      /Not enough encounter presets|Unknown enemy|Empty encounter preset/);
+    assert.deepEqual(game.rows.map((row) => row.enemies), [[original], []]);
+    assert.equal(game.enemiesLoaded, false);
+  }
 });

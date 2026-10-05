@@ -5,6 +5,7 @@ export class Enemy {
     this.id = id;
     this.definitionId = definition.id;
     this.name = definition.name;
+    this.kind = definition.kind ?? "";
     this.maxHealth = definition.maxHealth;
     this.health = definition.maxHealth;
     this.block = 0;

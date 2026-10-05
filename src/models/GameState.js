@@ -5,6 +5,7 @@ export class GameState {
     this.zoomedOut = false;
     this.activeRow = 0;
     this.selectedEnemyId = null;
+    this.enemiesLoaded = false;
   }
 
   get poisonTotal() {

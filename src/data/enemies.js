@@ -42,3 +42,12 @@ export const ENEMY_POOL = Object.freeze([
     attackBehaviour: { type: "fixed", text: "Crush · 11" },
   },
 ]);
+
+export const ENCOUNTER_PRESETS = Object.freeze([
+  { id: "ashbound-pair", enemyIds: ["ashbound", "ashbound"] },
+  { id: "glass-warden", enemyIds: ["glasswarden"] },
+  { id: "mireling-trio", enemyIds: ["mireling", "mireling", "mireling"] },
+  { id: "ironhowl", enemyIds: ["ironhowl"] },
+  { id: "ashbound-mireling", enemyIds: ["ashbound", "mireling"] },
+  { id: "warden-ashbound", enemyIds: ["glasswarden", "ashbound"] },
+].map((preset) => Object.freeze({ ...preset, enemyIds: Object.freeze(preset.enemyIds) })));

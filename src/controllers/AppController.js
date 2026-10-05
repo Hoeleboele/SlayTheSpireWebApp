@@ -54,12 +54,18 @@ export class AppController {
     const selected = button.dataset.enemyId ? state.findEnemy(button.dataset.enemyId)?.enemy : null;
     switch (action) {
       case "leave": this.showStartup(); return;
-      case "get-enemies": this.enemyPool.populateRows(state); break;
+      case "get-enemies":
+        if (state.enemiesLoaded) return;
+        this.enemyPool.populateRows(state);
+        break;
       case "end-turn": this.turns.endTurn(state); break;
       case "toggle-overview": state.zoomedOut = !state.zoomedOut; break;
       case "select-row": state.activeRow = Number(button.dataset.row); state.zoomedOut = false; break;
       case "navigate": state.activeRow = Math.max(0, Math.min(state.rows.length - 1, state.activeRow + Number(button.dataset.direction))); break;
-      case "spawn": this.enemyPool.spawnAtFront(state, Number(button.dataset.row)); break;
+      case "spawn":
+        if (!state.enemiesLoaded) return;
+        this.enemyPool.spawnAtFront(state, Number(button.dataset.row));
+        break;
       case "select-enemy": state.selectedEnemyId = button.dataset.enemyId; break;
       case "close-panel": state.selectedEnemyId = null; break;
       case "damage": selected?.takeDamage(Number(button.dataset.amount)); break;

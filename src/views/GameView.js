@@ -22,6 +22,7 @@ function attackMarkup(enemy) {
 
 function enemyCard(enemy, rowIndex) {
   const image = enemy.isAlive ? enemy.image : "assets/images/fallen.svg";
+  const behaviour = enemy.attackBehaviour;
   return `
     <button class="enemy-card ${enemy.isAlive ? "" : "is-dead"}" type="button" data-action="select-enemy" data-enemy-id="${escapeHtml(enemy.id)}" data-row="${rowIndex}" aria-label="Select ${escapeHtml(enemy.name)}${enemy.isAlive ? "" : ", defeated"}">
       <span class="enemy-art"><img src="${escapeHtml(image)}" alt="" draggable="false"><span class="art-index">${String(rowIndex + 1).padStart(2, "0")}</span>${enemy.isAlive ? "" : '<span class="defeated-stamp">DEFEATED</span>'}</span>
@@ -45,7 +46,7 @@ function rowMarkup(row, index, state) {
         <button class="row-title ${state.zoomedOut ? "row-select" : ""}" type="button" ${state.zoomedOut ? `data-action="select-row" data-row="${index}"` : "disabled"}>
           <span class="row-number">${String(index + 1).padStart(2, "0")}</span><span><small>ENCOUNTER LANE</small><strong>Row ${index + 1}</strong></span>${state.zoomedOut ? '<span class="row-open">OPEN ↗</span>' : ""}
         </button>
-        ${active ? `<button class="spawn-button" type="button" data-action="spawn" data-row="${index}"><span aria-hidden="true">＋</span> Spawn enemy</button>` : `<span class="enemy-count">${row.enemies.length} ${row.enemies.length === 1 ? "ENEMY" : "ENEMIES"}</span>`}
+        ${active ? `<button class="spawn-button" type="button" data-action="spawn" data-row="${index}" ${state.enemiesLoaded ? "" : "disabled"}><span aria-hidden="true">＋</span> Spawn enemy</button>` : `<span class="enemy-count">${row.enemies.length} ${row.enemies.length === 1 ? "ENEMY" : "ENEMIES"}</span>`}
       </header>
       ${row.enemies.length ? `<div class="enemy-grid">${row.enemies.map((enemy) => enemyCard(enemy, index)).join("")}</div>` : '<div class="empty-row"><span>—</span><p>Lane is clear. Get enemies to begin.</p></div>'}
     </section>`;
@@ -82,7 +83,7 @@ export class GameView {
         <section class="encounter-toolbar">
           <div class="encounter-title"><span class="live-dot"></span><span><small>ACTIVE ENCOUNTER</small><strong>${state.zoomedOut ? "All rows" : `Row ${state.activeRow + 1} <i>/ ${state.rows.length}</i>`}</strong></span></div>
           <div class="toolbar-actions">
-            <button class="secondary-button" type="button" data-action="get-enemies">Get enemies</button>
+            <button class="secondary-button" type="button" data-action="get-enemies" ${state.enemiesLoaded ? "disabled" : ""}>Get enemies</button>
             <button class="secondary-button overview-toggle" type="button" data-action="toggle-overview">${state.zoomedOut ? "Focus row" : "Show all rows"}</button>
             <button class="primary-button end-turn-button" type="button" data-action="end-turn">End turn <span aria-hidden="true">↗</span></button>
             <button class="leave-button" type="button" data-action="leave">Leave</button>

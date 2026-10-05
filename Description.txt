@@ -39,3 +39,9 @@ Enemies can have 3 diffent attack behaviour types.
 1. enemy just does an string attack every turn so no logic needed.
 2. enemy has a set loop of attacks that will cycle through the attacks every turn. i need to see all options and the current one selected. all should just be string options.
 3. enemy has attack types based on dice faces. the faces and types should be shown on the enemy.
+
+Initial encounter loading:
+Get enemies fills each row once per game with a randomly chosen preset, without reusing a preset in another row.
+Presets are: two Ashbound Initiates; one Glass Warden; three Mireling Swarms; one Ironhowl Brute; Ashbound Initiate then Mireling Swarm; Glass Warden then Ashbound Initiate.
+Get enemies is disabled after loading. Spawn enemy is disabled until loading completes.
+Leaving and starting a new game resets these controls.
